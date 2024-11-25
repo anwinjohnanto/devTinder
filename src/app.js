@@ -1,5 +1,6 @@
 const express = require('express');
 const { adminAuth, userAuth } = require('./middlewares/auth');
+const connectDB = require('./config/database');
 const app = express();;
 
 
@@ -15,9 +16,13 @@ app.use('/', (err, req, res, next) => {
     if (err) {
         res.status(500).send('Something went wrong');       
     }
-    
 });
 
-app.listen(7777,()=>{
-    console.log("server is listening to port 7777");
+
+connectDB().then(()=>{
+    console.log("Connection to DB established");
+    app.listen(7777, ()=>{
+        console.log('Server listening to port 7777');
+    })
 })
+.catch(err => console.log(err));
