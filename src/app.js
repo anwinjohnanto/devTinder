@@ -46,6 +46,42 @@ app.get('/feed', async (req, res)=>{
     }
 })
 
+app.delete('/user', async (req, res)=>{
+    const id = req.body.id;
+    try{
+        await userModel.findByIdAndDelete(id);
+        res.send("contact deleted sucessfully");
+    } catch(e){
+        res.status(500).send("Something went wrong")
+    }
+})
+
+// Patch using id
+app.patch('/user', async (req, res)=>{
+    const id = req.body.id;
+    const data = req.body;
+    try{
+        const user = await userModel.findByIdAndUpdate(id, data);
+        res.send("contact updated sucessfully");
+    } catch(e){
+        res.status(500).send("Something went wrong")
+    }
+})
+
+// Patch using email
+app.patch('/user', async (req, res)=>{
+    const email = req.body.email;
+    const data = req.body;
+    try{
+        const user = await userModel.findOneAndUpdate({email: email}, data);
+        res.send("contact updated sucessfully using email");
+    } catch(e){
+        res.status(500).send("Something went wrong")
+    }
+})
+
+
+
 connectDB().then(()=>{
     console.log("Connection to DB established");
     app.listen(7777, ()=>{
