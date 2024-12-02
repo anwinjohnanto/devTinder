@@ -13,7 +13,7 @@ app.post('/signup', async (req, res)=>{
         await userObj.save();
         res.status(201).send('User created successfully');
     }catch(err){
-        res.status(500).send("Something went wrong");
+        res.status(500).send("Something went wrong" + err.message);
     }
 })
 
@@ -57,14 +57,19 @@ app.delete('/user', async (req, res)=>{
 })
 
 // Patch using id
-app.patch('/user', async (req, res)=>{
-    const id = req.body.id;
+app.patch('/user/:id', async (req, res)=>{
+    const id = req.params.id;
     const data = req.body;
     try{
-        const user = await userModel.findByIdAndUpdate(id, data);
+        const ALLOWED_UPDATES = ["firstName", "lastName", "age", "gender", "skills"];
+        const isAllowed = Object.keys(data).every((k)=> ALLOWED_UPDATES.includes(k));
+        if (!isAllowed) {
+            throw new Error("Properties not allowed")
+        }
+        const user = await userModel.findByIdAndUpdate(id, data, {runValidators: true, returnDocument: 'after'});
         res.send("contact updated sucessfully");
     } catch(e){
-        res.status(500).send("Something went wrong")
+        res.status(500).send("Something went wrong " + e.message)
     }
 })
 
