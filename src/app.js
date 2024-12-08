@@ -4,8 +4,12 @@ const connectDB = require('./config/database');
 const userModel = require('./models/user');
 const { signupValidations } = require('./utils/validations');
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken');
+const user = require('./models/user');
+const cookieParser = require('cookie-parser');
 const app = express();;
 
+app.use(cookieParser())
 app.use(express.json());
 
 app.post('/signup', async (req, res) => {
@@ -37,12 +41,33 @@ app.post('/login', async (req, res) => {
             throw new Error('Invalid Credentials')
         }
         const isPasswordValid = await bcrypt.compare(password, user.password)        
-        if (!isPasswordValid) {
+        if (isPasswordValid) {
+            const token = jwt.sign({_id: user._id}, "shalom")
+            res.cookie("token", token)
+            res.status(200).send("Login Sucessful")
+        }
+        else{
             throw new Error("Invalid credentials")
-        } 
-        res.status(200).send("Login Sucessful")
+        }
     } catch (e) {
         res.status(400).send(e.message)
+    }
+})
+
+app.get('/profile', async (req, res)=>{
+    try{
+        const cookies = req.cookies
+        const {token} = cookies
+        const userId = await jwt.verify(token, "shalom")
+        if (userId._id) {
+            const user = await userModel.findById({_id: userId._id})
+            res.send(user)
+        }
+        else{
+            throw new Error("User not valid")
+        }
+    }catch{
+        res.status(401).send("Unauthorized")
     }
 })
 
