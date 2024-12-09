@@ -1,12 +1,11 @@
 const express = require('express');
-const { adminAuth, userAuth } = require('./middlewares/auth');
 const connectDB = require('./config/database');
 const userModel = require('./models/user');
 const { signupValidations } = require('./utils/validations');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
-const user = require('./models/user');
 const cookieParser = require('cookie-parser');
+const {userAuth} = require('./middlewares/auth')
 const app = express();;
 
 app.use(cookieParser())
@@ -40,10 +39,10 @@ app.post('/login', async (req, res) => {
         if (!user) {
             throw new Error('Invalid Credentials')
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password)        
+        const isPasswordValid = await user.validatePassword(password)      
         if (isPasswordValid) {
-            const token = jwt.sign({_id: user._id}, "shalom")
-            res.cookie("token", token)
+            const token = await user.getJwt()            
+            res.cookie("token", token, {expires: new Date(Date.now() + 360000000)})
             res.status(200).send("Login Sucessful")
         }
         else{
@@ -54,89 +53,17 @@ app.post('/login', async (req, res) => {
     }
 })
 
-app.get('/profile', async (req, res)=>{
+app.get('/profile', userAuth, async (req, res)=>{
     try{
-        const cookies = req.cookies
-        const {token} = cookies
-        const userId = await jwt.verify(token, "shalom")
-        if (userId._id) {
-            const user = await userModel.findById({_id: userId._id})
-            res.send(user)
-        }
-        else{
-            throw new Error("User not valid")
-        }
+        const {user} = req       
+        res.send(user)
     }catch{
         res.status(401).send("Unauthorized")
     }
 })
 
-app.get('/user', async (req, res) => {
-    try {
-        const user = await userModel.findOne({ email: req.body.email });
-        if (!user) {
-            res.status(404).send("User not found");
-        }
-        else {
-            res.status(200).send(user);
-        }
-    } catch (err) {
-        res.status(500).send("Something went wrong");
-    }
-
-})
-
-app.get('/feed', async (req, res) => {
-    try {
-        const feed = await userModel.find({}).exec();
-        if (feed.length == 0) {
-            res.status(404).send("users not found")
-        }
-        else {
-            res.send(feed)
-        }
-    } catch (e) {
-        res.status(500).send("Something went wrong")
-    }
-})
-
-app.delete('/user', async (req, res) => {
-    const id = req.body.id;
-    try {
-        await userModel.findByIdAndDelete(id);
-        res.send("contact deleted sucessfully");
-    } catch (e) {
-        res.status(500).send("Something went wrong")
-    }
-})
-
-// Patch using id
-app.patch('/user/:id', async (req, res) => {
-    const id = req.params.id;
-    const data = req.body;
-    try {
-        const ALLOWED_UPDATES = ["firstName", "lastName", "age", "gender", "skills"];
-        const isAllowed = Object.keys(data).every((k) => ALLOWED_UPDATES.includes(k));
-        if (!isAllowed) {
-            throw new Error("Properties not allowed")
-        }
-        const user = await userModel.findByIdAndUpdate(id, data, { runValidators: true, returnDocument: 'after' });
-        res.send("contact updated sucessfully");
-    } catch (e) {
-        res.status(500).send("Something went wrong " + e.message)
-    }
-})
-
-// Patch using email
-app.patch('/user', async (req, res) => {
-    const email = req.body.email;
-    const data = req.body;
-    try {
-        const user = await userModel.findOneAndUpdate({ email: email }, data);
-        res.send("contact updated sucessfully using email");
-    } catch (e) {
-        res.status(500).send("Something went wrong")
-    }
+app.get('/getConnectionRequest', userAuth, (req, res)=>{
+    res.send("Making connection request")
 })
 
 
